@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <title>우리 동네 안심 안전 지도</title>
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Apple SD Gothic Neo",
+        "Noto Sans KR",
+        sans-serif;
+      background: #f5f7f6;
+      color: #17211d;
+    }
+
+    body {
+      overflow: hidden;
+    }
+
+    .app {
+      height: 100dvh;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+    }
+
+    /* 왼쪽 패널 */
+    .panel {
+      background: #ffffff;
+      padding: 20px;
+      overflow-y: auto;
+      border-right: 1px solid #dfe6e2;
+      z-index: 1000;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 15px;
+      background: #1f7a5c;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 25px;
+      font-weight: 800;
+    }
+
+    h1 {
+      font-size: 21px;
+      margin: 0;
+      line-height: 1.25;
+    }
+
+    .subtitle {
+      margin-top: 5px;
+      color: #718078;
+      font-size: 13px;
+    }
+
+    /* 버튼 */
+    button,
+    select,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid #d6dfda;
+      background: #fff;
+      color: #26322d;
+      border-radius: 12px;
+      padding: 11px 14px;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .share-btn {
+      width: 100%;
+      background: #eef7f2;
+      border-color: #cce3d8;
+      color: #176448;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    /* 필터 */
+    .filters {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 5px;
+      margin-bottom: 18px;
+    }
+
+    .filters button {
+      white-space: nowrap;
+      padding: 9px 13px;
+      border-radius: 999px;
+    }
+
+    .filters button.active {
+      background: #1f7a5c;
+      border-color: #1f7a5c;
+      color: white;
+    }
+
+    /* 제보 */
+    .report-box {
+      background: #f7f9f8;
+      border: 1px solid #e1e8e4;
+      border-radius: 18px;
+      padding: 15px;
+      margin-bottom: 18px;
+    }
+
+    .report-title {
+      font-size: 16px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    form {
+      display: grid;
+      gap: 9px;
+    }
+
+    select,
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid #d5ded9;
+      border-radius: 11px;
+      background: white;
+      padding: 12px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 82px;
+      resize: vertical;
+    }
+
+    select:focus,
+    input:focus,
+    textarea:focus {
+      border-color: #1f7a5c;
+    }
+
+    .submit {
+      background: #1f7a5c;
+      color: white;
+      border: 0;
+      font-weight: 800;
+    }
+
+    .hint {
+      color: #75817b;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .location-selected {
+      color: #1f7a5c;
+      font-weight: 700;
+    }
+
+    /* 목록 */
+    .list-title {
+      font-size: 15px;
+      font-weight: 800;
+      margin: 5px 0 10px;
+    }
+
+    .card {
+      border: 1px solid #e0e6e3;
+      border-radius: 14px;
+      padding: 13px;
+      margin-bottom: 9px;
+      background: white;
+      cursor: pointer;
+    }
+
+    .card-title {
+      font-weight: 800;
+      margin-bottom: 5px;
+    }
+
+    .card-info {
+      color: #718078;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .empty {
+      color: #84908a;
+      text-align: center;
+      padding: 25px 10px;
+      font-size: 13px;
+    }
+
+    /* 지도 */
+    #map {
+      width: 100%;
+      height: 100%;
+      min-height: 300px;
+    }
+
+    /* 모바일 */
+    @media (max-width: 800px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        height: auto;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .panel {
+        order: 1;
+        border-right: 0;
+        padding: 16px;
+        max-height: none;
+      }
+
+      #map {
+        order: 2;
+        height: 55dvh;
+        min-height: 380px;
+      }
+
+      .logo {
+        margin-bottom: 15px;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .panel {
+        padding: 14px;
+      }
+
+      .logo-icon {
+        width: 44px;
+        height: 44px;
+      }
+
+      h1 {
+        font-size: 19px;
+      }
+
+      #map {
+        min-height: 420px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+
+    <!-- 왼쪽 / 위쪽 패널 -->
+    <aside class="panel">
+
+      <div class="logo">
+        <div class="logo-icon">안</div>
+
+        <div>
+          <h1>우리 동네 안심 안전 지도</h1>
+          <div class="subtitle">
+            도봉구 기준으로 안전한 길을 함께 모아요
+          </div>
+        </div>
+      </div>
+
+      <button id="share-btn" class="share-btn" type="button">
+        🔗 이 사이트 링크 복사
+      </button>
+
+      <div class="filters">
+        <button class="chip active" data-filter="all" type="button">
+          전체
+        </button>
+
+        <button class="chip" data-filter="route" type="button">
+          🚶 안심 귀갓길
+        </button>
+
+        <button class="chip" data-filter="store" type="button">
+          🏪 24시 편의점
+        </button>
+
+        <button class="chip" data-filter="safe" type="button">
+          🛡️ 치안 우수
+        </button>
+      </div>
+
+      <div class="report-box">
+
+        <div class="report-title">
+          📍 새로운 장소 제보
+        </div>
+
+        <form id="report-form">
+
+          <select id="category">
+            <option value="route">안심 귀갓길</option>
+            <option value="store">24시 편의점</option>
+            <option value="safe">치안 우수 지역</option>
+          </select>
+
+          <input
+            id="name"
+            required
+            placeholder="장소 이름"
+          />
+
+          <textarea
+            id="address"
+            required
+            placeholder="설명 또는 장소 정보를 입력하세요."
+          ></textarea>
+
+          <input
+            id="nickname"
+            placeholder="닉네임 (선택)"
+          />
+
+          <div id="coord-hint" class="hint">
+            🗺️ 지도에서 위치를 클릭해주세요.
+          </div>
+
+          <input type="hidden" id="lat" />
+          <input type="hidden" id="lng" />
+
+          <button class="submit" type="submit">
+            제보하기
+          </button>
+
+        </form>
+      </div>
+
+      <div class="list-title">
+        📋 등록된 장소
+      </div>
+
+      <div id="list"></div>
+
+    </aside>
+
+    <!-- 지도 -->
+    <div id="map"></div>
+
+  </div>
+
+
+  <!-- Leaflet JS -->
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+
+    /* =========================
+       기본 설정
+    ========================= */
+
+    const CENTER = [37.6686, 127.0466];
+
+    const KEY = "ansim-map-v4";
+
+    const LABELS = {
+      route: "안심 귀갓길",
+      store: "24시 편의점",
+      safe: "치안 우수"
+    };
+
+    const COLORS = {
+      route: "#1f7a5c",
+      store: "#c56a1a",
+      safe: "#1d5f8a"
+    };
+
+
+    /* =========================
+       기본 데이터
+    ========================= */
+
+    const seed = [
+
+      {
+        id: "1",
+        category: "safe",
+        name: "서울도봉경찰서",
+        address: "노해로 403",
+        nickname: "기본",
+        lat: 37.65305,
+        lng: 127.04755
+      },
+
+      {
+        id: "2",
+        category: "safe",
+        name: "서울도봉소방서",
+        address: "도봉로 666",
+        nickname: "기본",
+        lat: 37.66365,
+        lng: 127.04310
+      },
+
+      {
+        id: "3",
+        category: "route",
+        name: "창동역 큰길",
+        address: "불이 밝은 귀갓길",
+        nickname: "기본",
+        lat: 37.6532,
+        lng: 127.0473
+      },
+
+      {
+        id: "4",
+        category: "store",
+        name: "창동역 24시 편의점",
+        address: "창동역 일대",
+        nickname: "기본",
+        lat: 37.6538,
+        lng: 127.0468
+      },
+
+      {
+        id: "5",
+        category: "store",
+        name: "쌍문역 24시 편의점",
+        address: "쌍문역 주변",
+        nickname: "기본",
+        lat: 37.6489,
+        lng: 127.0342
+      }
+
+    ];
+
+
+    /* =========================
+       지도 생성
+    ========================= */
+
+    const map = L.map("map").setView(CENTER, 14);
+
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+      }
+    ).addTo(map);
+
+
+    const markers = L.layerGroup().addTo(map);
+
+    let filter = "all";
+
+
+    /* =========================
+       저장 데이터 불러오기
+    ========================= */
+
+    let reports;
+
+    try {
+
+      reports =
+        JSON.parse(localStorage.getItem(KEY) || "null")
+        || seed.slice();
+
+    } catch (error) {
+
+      reports = seed.slice();
+
+    }
+
+
+    /* =========================
+       지도 표시
+    ========================= */
+
+    function render() {
+
+      markers.clearLayers();
+
+      const list =
+        document.getElementById("list");
+
+      list.innerHTML = "";
+
+      const filtered =
+        reports.filter(
+          r =>
+            filter === "all"
+            || r.category === filter
+        );
+
+
+      if (filtered.length === 0) {
+
+        list.innerHTML =
+          '<div class="empty">등록된 장소가 없습니다.</div>';
+
+        return;
+      }
+
+
+      filtered.forEach(r => {
+
+        const color =
+          COLORS[r.category] || "#1f7a5c";
+
+
+        const marker =
+          L.circleMarker(
+            [r.lat, r.lng],
+            {
+              radius: 9,
+              color: color,
+              fillColor: color,
+              fillOpacity: 0.9,
+              weight: 2
+            }
+          );
+
+
+        marker.bindPopup(`
+          <b>${escapeHTML(r.name)}</b>
+          <br>
+          ${LABELS[r.category]}
+          <br>
+          ${escapeHTML(r.address)}
+          <br>
+          <small>제보자: ${escapeHTML(r.nickname || "익명")}</small>
+        `);
+
+
+        markers.addLayer(marker);
+
+
+        const card =
+          document.createElement("div");
+
+        card.className = "card";
+
+        card.innerHTML = `
+          <div class="card-title">
+            ${escapeHTML(r.name)}
+          </div>
+
+          <div class="card-info">
+            ${LABELS[r.category]}
+            ·
+            ${escapeHTML(r.address)}
+            <br>
+            제보자: ${escapeHTML(r.nickname || "익명")}
+          </div>
+        `;
+
+
+        card.onclick = () => {
+
+          map.setView(
+            [r.lat, r.lng],
+            17
+          );
+
+          marker.openPopup();
+
+        };
+
+
+        list.appendChild(card);
+
+      });
+
+    }
+
+
+    /* =========================
+       지도 클릭
+    ========================= */
+
+    map.on("click", e => {
+
+      const lat =
+        e.latlng.lat.toFixed(6);
+
+      const lng =
+        e.latlng.lng.toFixed(6);
+
+
+      document.getElementById("lat").value =
+        lat;
+
+      document.getElementById("lng").value =
+        lng;
+
+
+      const hint =
+        document.getElementById("coord-hint");
+
+      hint.textContent =
+        `📍 위치 선택됨 (${lat}, ${lng})`;
+
+      hint.classList.add(
+        "location-selected"
+      );
+
+    });
+
+
+    /* =========================
+       제보하기
+    ========================= */
+
+    document
+      .getElementById("report-form")
+      .addEventListener("submit", e => {
+
+        e.preventDefault();
+
+
+        const lat =
+          parseFloat(
+            document.getElementById("lat").value
+          );
+
+        const lng =
+          parseFloat(
+            document.getElementById("lng").value
+          );
+
+
+        if (
+          Number.isNaN(lat)
+          ||
+          Number.isNaN(lng)
+        ) {
+
+          alert(
+            "먼저 지도에서 위치를 선택해주세요."
+          );
+
+          return;
+        }
+
+
+        const report = {
+
+          id: Date.now(),
+
+          category:
+            document.getElementById("category").value,
+
+          name:
+            document.getElementById("name").value.trim(),
+
+          address:
+            document.getElementById("address").value.trim(),
+
+          nickname:
+            document.getElementById("nickname").value.trim()
+            || "익명",
+
+          lat,
+          lng
+
+        };
+
+
+        reports.unshift(report);
+
+
+        localStorage.setItem(
+          KEY,
+          JSON.stringify(reports)
+        );
+
+
+        e.target.reset();
+
+
+        document.getElementById(
+          "lat"
+        ).value = "";
+
+        document.getElementById(
+          "lng"
+        ).value = "";
+
+
+        const hint =
+          document.getElementById("coord-hint");
+
+        hint.textContent =
+          "🗺️ 지도에서 위치를 클릭해주세요.";
+
+        hint.classList.remove(
+          "location-selected"
+        );
+
+
+        render();
+
+
+        alert(
+          "제보가 저장되었습니다."
+        );
+
+      });
+
+
+    /* =========================
+       필터
+    ========================= */
+
+    document
+      .querySelectorAll(".chip")
+      .forEach(btn => {
+
+        btn.addEventListener(
+          "click",
+          () => {
+
+            document
+              .querySelectorAll(".chip")
+              .forEach(
+                b =>
+                  b.classList.remove(
+                    "active"
+                  )
+              );
+
+
+            btn.classList.add("active");
+
+
+            filter =
+              btn.dataset.filter;
+
+
+            render();
+
+          }
+        );
+
+      });
+
+
+    /* =========================
+       링크 복사
+    ========================= */
+
+    document
+      .getElementById("share-btn")
+      .addEventListener(
+        "click",
+        async () => {
+
+          const url =
+            location.href.split("#")[0];
+
+
+          try {
+
+            await navigator.clipboard.writeText(
+              url
+            );
+
+            alert(
+              "사이트 링크가 복사되었습니다."
+            );
+
+          } catch {
+
+            prompt(
+              "아래 주소를 복사하세요.",
+              url
+            );
+
+          }
+
+        }
+      );
+
+
+    /* =========================
+       HTML 안전 처리
+    ========================= */
+
+    function escapeHTML(value) {
+
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+
+    }
+
+
+    /* =========================
+       처음 실행
+    ========================= */
+
+    render();
+
+
+    /* 모바일에서 지도 크기 재계산 */
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 500);
+
+  </script>
+
+</body>
+</html>
