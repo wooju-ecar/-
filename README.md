@@ -6,7 +6,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>우리 동네 안심 안전 지도</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; font-family: sans-serif; }
@@ -59,7 +59,7 @@
     </aside>
     <div id="map"></div>
   </div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js
   <script>
     const CENTER = [37.6686, 127.0466];
     const KEY = "ansim-map-v3";
