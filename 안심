@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>우리 동네 안심 안전 지도</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background: #f5f7f6;
+      color: #17211d;
+    }
+    .app {
+      height: 100%;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+    }
+    .panel {
+      padding: 18px 16px 24px;
+      overflow: auto;
+      background: #fff;
+      border-right: 1px solid #dbe3de;
+    }
+    h1 { font-size: 20px; margin: 0; }
+    .sub { margin: 6px 0 14px; color: #5b6b64; font-size: 13px; }
+    .row, .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    button, select, input, textarea {
+      font: inherit;
+      padding: 10px;
+      border: 1px solid #cfd8d3;
+      border-radius: 10px;
+      background: #fff;
+    }
+    button { cursor: pointer; }
+    button.active, .submit {
+      background: #1f7a5c;
+      color: #fff;
+      border-color: #1f7a5c;
+    }
+    form { display: grid; gap: 8px; margin-bottom: 16px; }
+    #map { height: 100%; min-height: 280px; }
+    .card {
+      border: 1px solid #dbe3de;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      background: #fff;
+    }
+    .hint { color: #66756e; font-size: 12px; margin-top: 4px; }
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 3px 8px;
+      margin-bottom: 6px;
+    }
+    .route { background: #e8f5ee; color: #1f7a5c; }
+    .store { background: #fff1e4; color: #c56a1a; }
+    .safe { background: #e7f1f8; color: #1d5f8a; }
+    @media (max-width: 800px) {
+      .app { grid-template-columns: 1fr; grid-template-rows: 46% 54%; }
+      .panel { border-right: 0; border-top: 1px solid #dbe3de; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel">
+      <h1>우리 동네 안심 안전 지도</h1>
+      <p class="sub">도봉구 · 안심 귀갓길 · 24시 편의점 · 치안 우수 지역</p>
+
+      <div class="row">
+        <button id="share-btn" type="button">이 사이트 링크 복사</button>
+      </div>
+
+      <div class="filters">
+        <button class="chip active" data-filter="all" type="button">전체</button>
+        <button class="chip" data-filter="route" type="button">안심 귀갓길</button>
+        <button class="chip" data-filter="store" type="button">24시 편의점</button>
+        <button class="chip" data-filter="safe" type="button">치안 우수</button>
+      </div>
+
+      <form id="report-form">
+        <select id="category">
+          <option value="route">안심 귀갓길</option>
+          <option value="store">24시 편의점</option>
+          <option value="safe">치안 우수 지역</option>
+        </select>
+        <input id="name" required placeholder="장소 이름" />
+        <textarea id="address" required placeholder="설명. 지도를 클릭해서 위치를 찍으세요."></textarea>
+        <input id="nickname" placeholder="닉네임(선택)" />
+        <div class="hint" id="coord-hint">지도를 클릭하면 위치가 저장됩니다. 집 주소는 쓰지 마세요.</div>
+        <input type="hidden" id="lat" />
+        <input type="hidden" id="lng" />
+        <button class="submit" type="submit">제보하기</button>
+      </form>
+
+      <div id="list"></div>
+    </aside>
+    <div id="map"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const CENTER = [37.6686, 127.0466];
+    const KEY = "ansim-map-v4";
+    const LABELS = {
+      route: "안심 귀갓길",
+      store: "24시 편의점",
+      safe: "치안 우수"
+    };
+    const COLORS = {
+      route: "#1f7a5c",
+      store: "#c56a1a",
+      safe: "#1d5f8a"
+    };
+    const seed = [
+      { category: "safe", name: "서울
